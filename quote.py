@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 import willie
 from willie import module
 
+import sqlite3
 import random
 import codecs # TODO in python3, codecs.open isn't needed since the default open does encoding.
 import re
@@ -40,7 +41,7 @@ def quote(bot, trigger):
 		# get subcommand
 		command_parts = raw_args.split(' ', 1)
 		if len(command_parts) < 2:
-			output = 'invalid number of arguments'
+			output = trigger.nick + ': nah nah'
 		else:
 			subcommand = command_parts[0]
 			data = command_parts[1]
@@ -59,29 +60,47 @@ def quote(bot, trigger):
 	bot.say(output)
 
 def get_random_quote(bot, channel):
-    try:
-        msg = random.choice(bot.memory['chan_quotes'][channel])
-    except:
-        msg = 'We have no data'
-        return msg
+    db  = None
+    cur = None
+    db  = connect_db(bot)
+    cur = db.cursor()
 
+    try:
+        cur.execute('SELECT quote FROM quotes WHERE channel = ? ORDER BY RANDOM() LIMIT 1;', (channel,))
+        res = cur.fetchone()
+        if res is None:
+            msg = 'We have no data'
+        else:
+            msg = res[0]
+    except Exception as e:
+        raise e
+        msg = "Error looking for quotes"
+    finally:
+        db.close()
     return msg
 
 def add_quote(bot, channel, search):
+    db  = None
+    cur = None
+    db  = connect_db(bot)
+    cur = db.cursor()
+
     try:
         bot.memory['chan_messages'][channel]
     except:
         msg = "There's no history for this channel."
         return msg
 
-    for line in bot.memory['chan_messages'][channel]:
+    for line in reversed(bot.memory['chan_messages'][channel]):
         if re.search(search, line) is not None:
             try:
-                bot.memory['chan_quotes'][channel]
-            except:
-                bot.memory['chan_quotes'][channel] = []
-            bot.memory['chan_quotes'][channel].append(line)
-            msg = "Quote addedd"
+                cur.execute('INSERT INTO quotes (quote, channel) VALUES (?, ?);', (line, channel))
+                db.commit()
+                msg = "Quote addedd"
+            except Exception as e:
+                msg = "Error adding quote"
+            finally:
+                db.close()
             return msg
 
     msg = "What are you doing, moron?"
@@ -91,8 +110,12 @@ def setup(bot):
     bot.memory['chan_messages'] = {}
     bot.memory['chan_quotes'] = {}
 
+def connect_db(willie):
+    conn = sqlite3.connect('quotes.db')
+    return conn
+
 #save everything it's said on the channels
-@module.rule('^.*')
+@module.rule('^[^\.].*')
 def log_chan_message(bot, trigger):
     try:
         bot.memory['chan_messages'][trigger.sender].append(trigger.nick + ': ' +trigger)
