@@ -1,6 +1,7 @@
 """
 quote.py - A simple quotes module for willie
 Copyright (C) 2014  Andy Chung - iamchung.com
+Copyright (C) 2014  Luis Uribe - acme@eviled.org
 
 iamchung.com
 
@@ -21,8 +22,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 from __future__ import unicode_literals
 import willie
+from willie import module
+
 import random
 import codecs # TODO in python3, codecs.open isn't needed since the default open does encoding.
+import re
 
 @willie.module.commands('quote')
 def quote(bot, trigger):
@@ -31,7 +35,7 @@ def quote(bot, trigger):
 	output = ''
 	if raw_args is None or raw_args == '':
 		# display random quote
-		output = get_random_quote(filename)
+		output = get_random_quote(bot, trigger.sender)
 	else:
 		# get subcommand
 		command_parts = raw_args.split(' ', 1)
@@ -40,141 +44,58 @@ def quote(bot, trigger):
 		else:
 			subcommand = command_parts[0]
 			data = command_parts[1]
-			
+
 			# perform subcommand
 			if subcommand == 'add':
-				output = add_quote(filename, data)
-			elif subcommand == 'delete':
-				output = delete_quote(filename, data)
-			elif subcommand == 'show':
-				output = show_quote(filename, data)
-			elif subcommand == 'search':
-				output = search_quote(filename, data)
+				output = add_quote(bot, trigger.sender, data)
+			# elif subcommand == 'delete':
+			# 	output = delete_quote(filename, data)
+			# elif subcommand == 'show':
+			# 	output = show_quote(filename, data)
+			# elif subcommand == 'search':
+			# 	output = search_quote(filename, data)
 			else:
 				output = 'invalid subcommand'
 	bot.say(output)
-		
-def is_valid_int(num):
-    """Check if input is valid integer"""
+
+def get_random_quote(bot, channel):
     try:
-        int(num)
-        return True
-    except ValueError:
-        return False
-        
-def get_random_quote(filename):
-    msg = ''
-
-    # open file and read all lines
-    with codecs.open(filename, 'r', encoding='utf-8') as quotefile:
-        num_lines = sum(1 for line in quotefile)
-        if num_lines == 0:
-            msg = 'empty file.'
-        else:
-            rand = random.randint(0, num_lines - 1)
-            counter = 0
-            quotefile.seek(0)
-            line = quotefile.readline()
-            while counter < rand:
-                line = quotefile.readline().strip()
-                counter += 1
-            msg = '[%d] %s' % (rand, line)
-
-    return msg
-    
-def add_quote(filename, line_to_add):
-    msg = ''
-
-    # sanitize and prep quote
-    line_to_add.replace('\n', '')
-    line_to_add = line_to_add + '\n'
-
-    # write quote to file
-    with codecs.open(filename, 'a', encoding='utf-8') as quotefile:
-        quotefile.write(line_to_add)
-    msg = 'quote added.'
+        msg = random.choice(bot.memory['chan_quotes'][channel])
+    except:
+        msg = 'We have no data'
+        return msg
 
     return msg
 
-def delete_quote(filename, data):
-    msg = ''
+def add_quote(bot, channel, search):
+    try:
+        bot.memory['chan_messages'][channel]
+    except:
+        msg = "There's no history for this channel."
+        return msg
 
-    # check if argument is valid int
-    if not is_valid_int(data):
-    	msg = 'command argument must be valid integer'
-    	return msg
+    for line in bot.memory['chan_messages'][channel]:
+        if re.search(search, line) is not None:
+            try:
+                bot.memory['chan_quotes'][channel]
+            except:
+                bot.memory['chan_quotes'][channel] = []
+            bot.memory['chan_quotes'][channel].append(line)
+            msg = "Quote addedd"
+            return msg
 
-    line_num = int(data)
-    
-    # check if argument is negative
-    if line_num < 0:
-    	msg = 'command argument must be non-negative'
-    	return msg
-
-	# get all quotes
-    lines = None
-    with codecs.open(filename, 'r', encoding='utf-8') as quotefile:
-        lines = quotefile.readlines()
-
-    # check if input is within bounds
-    if line_num < len(lines):
-        # remove quote from list
-        lines.pop(line_num)
-        # replace file contents with updated list
-        with codecs.open(filename, 'w', encoding='utf-8') as quotefile:
-            for line in lines:
-                quotefile.write(line)
-        msg = 'deleted line #%s.' % (line_num)
-    else:
-        msg = 'command argument exceeds number of lines in file'        
-
+    msg = "What are you doing, moron?"
     return msg
 
-def show_quote(filename, data):
-    msg = ''
+def setup(bot):
+    bot.memory['chan_messages'] = {}
+    bot.memory['chan_quotes'] = {}
 
-    # check if argument is valid int
-    if not is_valid_int(data):
-    	msg = 'command argument must be valid integer'
-    	return msg
-    	
-    line_num = int(data)
-
-    # check if input is negative
-    if line_num < 0:
-    	msg = 'command argument must be non-negative'
-    	return msg 	
-    
-    # get all quotes
-    lines = None
-    with codecs.open(filename, 'r', encoding='utf-8') as quotefile:
-        lines = quotefile.readlines()
-
-    # check if input is within bounds
-    # TODO make this a runtime property (count) so we don't have to constantly check file
-    if line_num < len(lines):
-        # send desired quote as message
-        msg = '[' + str(line_num) + '] ' + lines[line_num]
-    else:
-        msg = 'command argument exceeds number of lines in file'
-
-    return msg
-
-def search_quote(filename, data):
-    msg = ''
-
-    # get all quotes
-    lines = None
-    with open(filename, 'r') as quotefile:
-        lines = quotefile.readlines()
-
-    # filter quotes
-    # TODO use regex match to allow wildcard
-    results = ['[%d] %s' % (lines.index(line), line) for line in lines if data.lower() in line.lower() > -1]
-    if len(results) > 0:
-		rand = random.randint(0, len(results) - 1)
-		msg = results[rand]
-    else:
-        msg = "no matches found for search phrase: %s" % (data)
-
-    return msg
+#save everything it's said on the channels
+@module.rule('^.*')
+def log_chan_message(bot, trigger):
+    try:
+        bot.memory['chan_messages'][trigger.sender].append(trigger.nick + ': ' +trigger)
+    except:
+        bot.memory['chan_messages'][trigger.sender] = []
+        bot.memory['chan_messages'][trigger.sender].append(trigger.nick + ': ' +trigger)
