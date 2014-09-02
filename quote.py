@@ -31,33 +31,33 @@ import re
 
 @willie.module.commands('quote')
 def quote(bot, trigger):
-	filename = bot.config.quote.filename
-	raw_args = trigger.group(2)
-	output = ''
-	if raw_args is None or raw_args == '':
-		# display random quote
-		output = get_random_quote(bot, trigger.sender)
-	else:
-		# get subcommand
-		command_parts = raw_args.split(' ', 1)
-		if len(command_parts) < 2:
-			output = trigger.nick + ': nah nah'
-		else:
-			subcommand = command_parts[0]
-			data = command_parts[1]
+    filename = bot.config.quote.filename
+    raw_args = trigger.group(2)
+    output = ''
+    if raw_args is None or raw_args == '':
+        # display random quote
+        output = get_random_quote(bot, trigger.sender)
+    else:
+        # get subcommand
+        command_parts = raw_args.split(' ', 1)
+        if len(command_parts) < 2:
+            output = trigger.nick + ': nah nah'
+        else:
+            subcommand = command_parts[0]
+            data = command_parts[1]
 
-			# perform subcommand
-			if subcommand == 'add':
-				output = add_quote(bot, trigger.sender, data)
-			# elif subcommand == 'delete':
-			# 	output = delete_quote(filename, data)
-			# elif subcommand == 'show':
-			# 	output = show_quote(filename, data)
-			# elif subcommand == 'search':
-			# 	output = search_quote(filename, data)
-			else:
-				output = 'invalid subcommand'
-	bot.say(output)
+            # perform subcommand
+            if subcommand == 'add':
+                output = add_quote(bot, trigger.sender, data)
+            # elif subcommand == 'delete':
+            # 	output = delete_quote(filename, data)
+            # elif subcommand == 'show':
+            # 	output = show_quote(filename, data)
+            # elif subcommand == 'search':
+            # 	output = search_quote(filename, data)
+        else:
+            output = 'invalid subcommand'
+    bot.say(output)
 
 def get_random_quote(bot, channel):
     db  = None
@@ -74,7 +74,7 @@ def get_random_quote(bot, channel):
             msg = res[0]
     except Exception as e:
         raise e
-        msg = "Error looking for quotes"
+    msg = "Error looking for quotes"
     finally:
         db.close()
     return msg
