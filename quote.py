@@ -53,10 +53,11 @@ def quote(bot, trigger):
             # 	output = delete_quote(filename, data)
             # elif subcommand == 'show':
             # 	output = show_quote(filename, data)
-            # elif subcommand == 'search':
-            # 	output = search_quote(filename, data)
-        else:
-            output = 'invalid subcommand'
+            elif subcommand == 'search':
+                for quote in search_quote(bot, trigger.sender, data):
+                    bot.say(quote)
+            else:
+                output = 'invalid subcommand'
     bot.say(output)
 
 def get_random_quote(bot, channel):
@@ -74,7 +75,7 @@ def get_random_quote(bot, channel):
             msg = res[0]
     except Exception as e:
         raise e
-    msg = "Error looking for quotes"
+        msg = "Error looking for quotes"
     finally:
         db.close()
     return msg
@@ -105,6 +106,21 @@ def add_quote(bot, channel, search):
 
     msg = "What are you doing, moron?"
     return msg
+
+
+def search_quote(bot, channel, search):
+    db = connect_db(bot)
+    cur = db.cursor()
+
+    msg = ['Quote not found.']
+    try:
+        query = 'SELECT quote FROM quotes WHERE quote LIKE "%?%"'
+        cur.execute(query, (search,))
+        msg = [quote[0] for quote in cur.fetchall()]
+    except:
+        msg = ['Error looking for quotes']
+    return msg
+
 
 def setup(bot):
     bot.memory['chan_messages'] = {}
