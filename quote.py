@@ -31,33 +31,34 @@ import re
 
 @willie.module.commands('quote')
 def quote(bot, trigger):
-	filename = bot.config.quote.filename
-	raw_args = trigger.group(2)
-	output = ''
-	if raw_args is None or raw_args == '':
-		# display random quote
-		output = get_random_quote(bot, trigger.sender)
-	else:
-		# get subcommand
-		command_parts = raw_args.split(' ', 1)
-		if len(command_parts) < 2:
-			output = trigger.nick + ': nah nah'
-		else:
-			subcommand = command_parts[0]
-			data = command_parts[1]
+    filename = bot.config.quote.filename
+    raw_args = trigger.group(2)
+    output = ''
+    if raw_args is None or raw_args == '':
+        # display random quote
+        output = get_random_quote(bot, trigger.sender)
+    else:
+        # get subcommand
+        command_parts = raw_args.split(' ', 1)
+        if len(command_parts) < 2:
+            output = trigger.nick + ': nah nah'
+        else:
+            subcommand = command_parts[0]
+            data = command_parts[1]
 
-			# perform subcommand
-			if subcommand == 'add':
-				output = add_quote(bot, trigger.sender, data)
-			# elif subcommand == 'delete':
-			# 	output = delete_quote(filename, data)
-			# elif subcommand == 'show':
-			# 	output = show_quote(filename, data)
-			# elif subcommand == 'search':
-			# 	output = search_quote(filename, data)
-			else:
-				output = 'invalid subcommand'
-	bot.say(output)
+            # perform subcommand
+            if subcommand == 'add':
+                output = add_quote(bot, trigger.sender, data)
+            # elif subcommand == 'delete':
+            # 	output = delete_quote(filename, data)
+            # elif subcommand == 'show':
+            # 	output = show_quote(filename, data)
+            elif subcommand == 'search':
+                for quote in search_quote(bot, trigger.sender, data):
+                    bot.say(quote)
+            else:
+                output = 'invalid subcommand'
+    bot.say(output)
 
 def get_random_quote(bot, channel):
     db  = None
@@ -105,6 +106,21 @@ def add_quote(bot, channel, search):
 
     msg = "What are you doing, moron?"
     return msg
+
+
+def search_quote(bot, channel, search):
+    db = connect_db(bot)
+    cur = db.cursor()
+
+    msg = ['Quote not found.']
+    try:
+        query = 'SELECT quote FROM quotes WHERE quote LIKE "%?%"'
+        cur.execute(query, (search,))
+        msg = [quote[0] for quote in cur.fetchall()]
+    except:
+        msg = ['Error looking for quotes']
+    return msg
+
 
 def setup(bot):
     bot.memory['chan_messages'] = {}
