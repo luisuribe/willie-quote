@@ -74,7 +74,6 @@ def get_random_quote(bot, channel):
         else:
             msg = res[0]
     except Exception as e:
-        raise e
         msg = "Error looking for quotes"
     finally:
         db.close()
@@ -114,10 +113,9 @@ def search_quote(bot, channel, search):
 
     msg = ['Quote not found.']
     try:
-        query = 'SELECT quote FROM quotes WHERE quote LIKE "%?%"'
-        cur.execute(query, (search,))
+        cur.execute('SELECT quote FROM quotes WHERE quote LIKE ? and channel = ? LIMIT 5', ('%' + search + '%', channel))
         msg = [quote[0] for quote in cur.fetchall()]
-    except:
+    except Exception as e:
         msg = ['Error looking for quotes']
     return msg
 
