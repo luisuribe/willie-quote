@@ -96,7 +96,7 @@ def add_quote(bot, channel, search):
             try:
                 cur.execute('INSERT INTO quotes (quote, channel) VALUES (?, ?);', (line, channel))
                 db.commit()
-                msg = "Quote addedd: %s"%(quote)
+                msg = "Quote added: " + line
             except Exception as e:
                 msg = "Error adding quote"
             finally:
